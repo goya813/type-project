@@ -12,8 +12,8 @@ from nompy import (
     sequence2,
 )
 
-from type_project.ast import Expr, If, Lt, Plus, Minus, Times, Let, Var, Env, Value
-from type_project.parser_utility import terminated, opt, preceded
+from type_project.ast import Expr, If, Lt, Plus, Minus, Times, Let, Var, Env, Value, Judgement
+from type_project.parser_utility import terminated, opt, preceded, delimited, space, wraped
 
 T = TypeVar("T")
 V = TypeVar("V")
@@ -105,7 +105,10 @@ def parser_times() -> StrParser[Times, str]:
 def parser_plus_minus() -> StrParser[list[Plus | Minus], str]:
     return parser_map(
         skip_space_sequence(
-            (parser_times(), many0(skip_space_sequence((tag("+"), parser_times()))))
+            (
+                parser_times(),
+                many0(skip_space_sequence((alt((tag("+"), tag("-"))), parser_times()))),
+            )
         ),
         lambda x: assoc_left(x[0], x[1]),
     )
@@ -160,8 +163,8 @@ def parser_expr(s: str) -> StrParserResult[Expr, str]:
     return alt(
         [
             parser_let(),
-            parser_lt(),
             parser_if(),
+            parser_lt(),
         ]
     )(s)
 
@@ -171,13 +174,36 @@ def parser_bind() -> StrParser[tuple[str, Value]]:
 
 
 def parser_name() -> StrParser[str, str]:
-    return take_while(str.isalnum)
+    def is_not_keyword(s):
+        if s in {"let", "if", "then", "else"}:
+            raise ValueError
+        return s
+
+    return parser_map_exception(take_while(str.isalnum), is_not_keyword)
 
 
 def parser_environment() -> StrParser[Env, str]:
-    def
-    return parser_map(sequence2((opt(parser_bind()), preceded(tag(","), parser_bind()))))
+    def create_env(x):
+        bind_head = x[0]
 
+        env = Env([])
+        if bind_head is not None:
+            env = env.push(bind_head[0], bind_head[1])
+        bind_tail = x[1]
+        for b in bind_tail:
+            env = env.push(b[0], b[1])
+        return env
+
+    return parser_map(skip_space_sequence((opt(parser_bind()), many0(preceded(wraped(tag(","), space()), parser_bind())))), create_env)
+
+
+def parser_judge() -> StrParser[Judgement]:
+    def f(x):
+        return Judgement(x[0], x[2], x[4])
+
+    return parser_map(skip_space_sequence((
+        parser_environment(), tag("|-"), parser_expr, tag("evalto"), parser_value()
+    )), f)
 
 if __name__ == "__main__":
     print(parser_expr("1+2"))

@@ -70,11 +70,6 @@ class Var:
         return self.key
 
 
-@dataclass
-class Judgement:
-    e: Any
-    v: Any
-
 
 @dataclass
 class Var:
@@ -90,14 +85,30 @@ class Env:
     def __init__(self, vars: list[(str, Value)]):
         self.vars = vars
 
-    def pop(self):
+    def __eq__(self, other):
+        return self.vars == other
+
+    def pop(self) -> "Env":
         return Env(self.vars[:-1])
 
-    def push(self, key: str, value: Value):
+    def push(self, key: str, value: Value) -> "Env":
         return Env(self.vars + [(key, value)])
 
     def lookup(self, key):
-        for k, v in self.vars:
+        for k, v in self.vars[::-1]:
             if k == key:
                 return v
         raise KeyError(f"key {key} not found")
+
+    def __str__(self):
+        return ",".join([f"{k}={v}" for k, v in self.vars])
+
+    def __repr__(self):
+        return str(self)
+
+
+@dataclass
+class Judgement:
+    env: Env
+    e: Any
+    v: Any

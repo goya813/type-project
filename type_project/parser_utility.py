@@ -1,4 +1,4 @@
-from nompy import StrParser, parser_map, sequence2, StrParserResult
+from nompy import StrParser, parser_map, sequence2, StrParserResult, take_while, sequence
 
 
 def terminated(first: StrParser, second: StrParser) -> StrParser:
@@ -9,9 +9,12 @@ def preceded(first: StrParser, second: StrParser) -> StrParser:
     return parser_map(sequence2((first, second)), lambda x: x[1])
 
 
-class Empty:
-    pass
+def delimited(first: StrParser, second: StrParser, third: StrParser) -> StrParser:
+    return parser_map(sequence((first, second, third)), lambda x: x[1])
 
+
+def wraped(target: StrParser, wrap: StrParser) -> StrParser:
+    return delimited(wrap, target, wrap)
 
 def opt[V, E](parser: StrParser[V, E]) -> StrParser[V, E]:
     def new_parser(s: str) -> StrParserResult:
@@ -21,3 +24,7 @@ def opt[V, E](parser: StrParser[V, E]) -> StrParser[V, E]:
         return res
 
     return new_parser
+
+
+def space() -> StrParser:
+    return take_while(lambda c: c in " \t\n")

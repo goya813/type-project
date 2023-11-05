@@ -1,4 +1,5 @@
 from type_project.ast import *
+from type_project.parser import parser_expr
 
 
 class ErrorPlusErrorL(Exception):
@@ -91,6 +92,10 @@ def solve_value(e: Expr, env: Env) -> Value:
                 return solve_value(e2, env)
             else:
                 return solve_value(e3, env)
+        case Let(key, e1, e2):
+            v1 = solve_value(e1, env)
+            env = env.push(key, v1)
+            return solve_value(e2, env)
         case int(x):
             return x
         case bool(x):
@@ -99,14 +104,14 @@ def solve_value(e: Expr, env: Env) -> Value:
 
 def generate_env_text(env: Env) -> str:
     if len(env.vars) == 0 or env.vars is None:
-        return "|-"
+        return "|- "
 
     result = ""
     for k, v in env.vars[:-1]:
         result += f"{k} = {v}, "
 
     k, v = env.vars[-1]
-    result += f"{k} = {v} |-"
+    result += f"{k} = {v} |- "
 
     return result
 
@@ -128,11 +133,11 @@ def solve(e: Expr, env: Env) -> str:
             value = env.lookup(e1)
 
             if e1 == key:
-                append_result(f"{e1} evalto {value} by E-Var1" + "{};", env)
+                append_result(f"{e1} evalto {value} by E-Var1" + "{};", env, has_newline=False)
             else:
                 append_result(f"{e1} evalto {value} by E-Var2" + "{", env)
                 append_result(solve(e, env.pop()), env, use_env=False)
-                append_result("};", env, use_env=False)
+                append_result("};", env, use_env=False, has_newline=False)
 
         case Plus(e1, e2):
             try:
@@ -157,7 +162,7 @@ def solve(e: Expr, env: Env) -> str:
             append_result(solve(e1, env), env, use_env=False)
             append_result(solve(e2, env), env, use_env=False)
             append_result(f" {x1} plus {x2} is {v} by B-Plus" + "{};", env, use_env=False)
-            append_result("};", env, use_env=False)
+            append_result("};", env, use_env=False, has_newline=False)
 
         case Minus(e1, e2):
             x1 = solve_value(e1, env)
@@ -169,7 +174,7 @@ def solve(e: Expr, env: Env) -> str:
                     append_result(solve(e1, env), env, use_env=False)
                     append_result(solve(e2, env), env, use_env=False)
                     append_result(f" {x1} minus {x2} is {v} by B-Minus" + "{};", env, use_env=False)
-                    append_result("};", env, use_env=False)
+                    append_result("};", env, use_env=False, has_newline=False)
                 case _:
                     append_result(f"{e1} - {e2} evalto error", env)
         case Times(e1, e2):
@@ -182,7 +187,7 @@ def solve(e: Expr, env: Env) -> str:
                     append_result(solve(e1, env), env, use_env=False)
                     append_result(solve(e2, env), env, use_env=False)
                     append_result(f" {x1} times {x2} is {v} by B-Times" + "{};", env, use_env=False)
-                    append_result("};", env, use_env=False)
+                    append_result("};", env, use_env=False, has_newline=False)
                 case _:
                     append_result(f"{e1} * {e2} evalto error", env)
         case If(e1, e2, e3):
@@ -195,24 +200,24 @@ def solve(e: Expr, env: Env) -> str:
                         append_result(f"{e} evalto {x2} by E-IfT" + "{", env)
                         append_result(solve(e1, env), env, use_env=False)
                         append_result(solve(e2, env), env, use_env=False)
-                        append_result("};", env, use_env=False)
+                        append_result("};", env, use_env=False, has_newline=False)
                     except:
                         append_result(f"{e} evalto error by E-IfTError" + "{", env)
                         append_result(solve(e1, env), env, use_env=False)
                         append_result(solve(e2, env), env, use_env=False)
-                        append_result("};", env, use_env=False)
+                        append_result("};", env, use_env=False, has_newline=False)
                 else:
                     try:
                         x3 = solve_value(e3, env)
                         append_result(f"{e} evalto {x3} by E-IfF" + "{", env)
                         append_result(solve(e1, env), env, use_env=False)
                         append_result(solve(e3, env), env, use_env=False)
-                        append_result("};", env, use_env=False)
+                        append_result("};", env, use_env=False, has_newline=False)
                     except:
                         append_result(f"{e} evalto error by E-IfFError" + "{", env)
                         append_result(solve(e1, env), env, use_env=False)
                         append_result(solve(e3, env), env, use_env=False)
-                        append_result("};", env, use_env=False)
+                        append_result("};", env, use_env=False, has_newline=False)
             else:
                 append_result(f"{e} evalto error by E-IfInt" + "{", env)
                 append_result(solve(e1, env), env, use_env=False)
@@ -234,7 +239,7 @@ def solve(e: Expr, env: Env) -> str:
                     append_result(f" {v1} less than {v2} is false by B-Lt" + "{};", env, use_env=False)
                 append_result("};", env, use_env=False)
             except ErrorLtBoolL:
-                append_result(f"{e1} < {e2} evalto error by E-LtBoolL" + "{\n", env)
+                append_result(f"{e1} < {e2} evalto error by E-LtBoolL" + "{", env)
                 append_result(f"{e1} evalto {e1} by E-Bool" + "{};", env)
                 append_result("};", env, use_env=False)
             except ErrorLtBoolR:
@@ -245,13 +250,14 @@ def solve(e: Expr, env: Env) -> str:
             v1 = solve_value(e1, env)
             env = env.push(key, v1)
             v2 = solve_value(e2, env)
-            append_result(f"let {key} = {e1} in {e2} evalto error by E-LtBoolR" + "{", env)
-            append_result(f"{e2} evalto {e2} by E-Bool" + "{};", env)
+            append_result(f"{e} evalto {v2} by E-Let" + "{", env.pop())
+            append_result(solve(e1, env.pop()), env, use_env=False)
+            append_result(solve(e2, env), env, use_env=False)
             append_result("};", env, use_env=False)
         case int(x):
-            append_result(f"{x} evalto {x} by E-Int" + "{};", env)
+            append_result(f"{x} evalto {x} by E-Int" + "{};", env, has_newline=False)
         case bool(x):
-            append_result(f"{x} evalto {x} by E-Bool" + "{};", env)
+            append_result(f"{x} evalto {x} by E-Bool" + "{};", env, has_newline=False)
 
     return result
 
@@ -270,8 +276,10 @@ if __name__ == "__main__":
     # e = If(Plus(2, 3), 1, 3)
     # j = Judgement(e, "error")
 
-    env = Env([("x", True), ("y", 4)])
-    e = If(Var("x"), Plus(Var("y"), 1), Minus(Var("y"), 1))
+    env = Env([])
+    e = Let("x", Let("y", Minus(3, 2), Times(Var("y"), Var("y"))), Let("y", 4, Plus(Var("x"), Var("y"))))
+    # e = parser_expr("let x = let y = 3 - 2 in y * y in let y = 4 in x + y").return_value
+    print(e)
     j = Judgement(e, 5)
     """
     3 + if -23 < -2 * 8 then 8 else 2 + 4 evalto 11
