@@ -7,21 +7,35 @@ class Plus:
     e1: Any
     e2: Any
 
+    def __str__(self):
+        return f"({self.e1} + {self.e2})"
+
 
 @dataclass
 class Minus:
     e1: Any
     e2: Any
 
+    def __str__(self):
+        return f"({self.e1} - {self.e2})"
+
+
 @dataclass
 class Times:
     e1: Any
     e2: Any
 
+    def __str__(self):
+        return f"({self.e1} * {self.e2})"
+
+
 @dataclass
 class Lt:
     e1: Any
     e2: Any
+
+    def __str__(self):
+        return f"{self.e1} < {self.e2}"
 
 
 @dataclass
@@ -29,6 +43,9 @@ class If:
     e1: Any
     e2: Any
     e3: Any
+
+    def __str__(self):
+        return f"if {self.e1} then {self.e2} else {self.e3}"
 
 
 @dataclass
