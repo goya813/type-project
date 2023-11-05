@@ -97,7 +97,7 @@ class Env:
         return Env(self.vars + [(key, value)])
 
     def lookup(self, key):
-        for k, v in self.vars:
+        for k, v in self.vars[::-1]:
             if k == key:
                 return v
         raise KeyError(f"key {key} not found")
