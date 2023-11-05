@@ -59,6 +59,14 @@ class Let:
 
 
 @dataclass
+class Var:
+    key: str
+
+    def __str__(self):
+        return self.key
+
+
+@dataclass
 class Judgement:
     e: Any
     v: Any
