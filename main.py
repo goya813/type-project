@@ -210,7 +210,8 @@ def solve(e: Expr) -> str:
 
     return result
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # e = Plus(Plus(1, True), 2)
     # j = Judgement(e, "error")
     # e = Plus(Plus(3, If(Lt(-23, Times(-2, 8)), 8, 2)), 4)
