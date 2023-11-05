@@ -12,7 +12,8 @@ from nompy import (
     sequence2,
 )
 
-from type_project.ast import Expr, If, Lt, Plus, Minus, Times, Let, Var
+from type_project.ast import Expr, If, Lt, Plus, Minus, Times, Let, Var, Env, Value
+from type_project.parser_utility import terminated, opt, preceded
 
 T = TypeVar("T")
 V = TypeVar("V")
@@ -58,11 +59,17 @@ def parser_unary() -> StrParser[Expr, str]:
     return alt(
         [
             parser_paren_expr(),
-            parser_int(),
-            parser_bool(),
+            parser_value(),
             parser_var(),
         ]
     )
+
+
+def parser_value() -> StrParser[Value, str]:
+    return alt([
+        parser_int(),
+        parser_bool(),
+    ])
 
 
 def parser_var() -> StrParser[Expr, str]:
@@ -137,7 +144,7 @@ def parser_let() -> StrParser[Let, str]:
         skip_space_sequence(
             (tag("let"), parser_name(), tag("="), parser_expr, tag("in"), parser_expr)
         ),
-        lambda x: Let(name=x[1], e1=x[3], e2=x[5]),
+        lambda x: Let(key=x[1], e1=x[3], e2=x[5]),
     )
 
 
@@ -159,8 +166,17 @@ def parser_expr(s: str) -> StrParserResult[Expr, str]:
     )(s)
 
 
+def parser_bind() -> StrParser[tuple[str, Value]]:
+    return parser_map(skip_space_sequence((parser_name(), tag("="), parser_value())), lambda x: (x[0], x[2]))
+
+
 def parser_name() -> StrParser[str, str]:
     return take_while(str.isalnum)
+
+
+def parser_environment() -> StrParser[Env, str]:
+    def
+    return parser_map(sequence2((opt(parser_bind()), preceded(tag(","), parser_bind()))))
 
 
 if __name__ == "__main__":
