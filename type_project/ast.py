@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from typing import Any
 
 
+Expr = Any
+Value = int | bool
+
+
 @dataclass
 class Plus:
     e1: Any
@@ -50,12 +54,12 @@ class If:
 
 @dataclass
 class Let:
-    name: str
+    key: str
     e1: Any
     e2: Any
 
     def __str__(self):
-        return f"let {self.name} = {self.e1} in {self.e2}"
+        return f"let {self.key} = {self.e1} in {self.e2}"
 
 
 @dataclass
@@ -72,5 +76,28 @@ class Judgement:
     v: Any
 
 
-Expr = Any
-Value = int | bool
+@dataclass
+class Var:
+    key: str
+
+    def __str__(self):
+        return self.key
+
+
+class Env:
+    vars: list[(str, Value)]
+
+    def __init__(self, vars: list[(str, Value)]):
+        self.vars = vars
+
+    def pop(self):
+        return Env(self.vars[:-1])
+
+    def push(self, key: str, value: Value):
+        return Env(self.vars + [(key, value)])
+
+    def lookup(self, key):
+        for k, v in self.vars:
+            if k == key:
+                return v
+        raise KeyError(f"key {key} not found")
