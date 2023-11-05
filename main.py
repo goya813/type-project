@@ -1,7 +1,4 @@
-from dataclasses import dataclass
-from typing import Any, TypeVar, Generic, Iterable, Callable, TypeVarTuple
 from type_project.ast import *
-from type_project.parser import parser_expr
 
 
 class ErrorPlusErrorL(Exception):
