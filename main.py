@@ -268,4 +268,3 @@ if __name__ == '__main__':
     # result = solve(parsed_expr.return_value)
 
     # print(result.replace("True", "true").replace("False", "false"))
-    print(parser_expr("let x = 1 in x + 1"))
