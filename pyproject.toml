@@ -7,6 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+nompy = { git = "https://github.com/higumachan/nompy.git"}
 
 
 [build-system]
