@@ -137,7 +137,7 @@ def parser_let() -> StrParser[Let, str]:
         skip_space_sequence(
             (tag("let"), parser_name(), tag("="), parser_expr, tag("in"), parser_expr)
         ),
-        lambda x: Let(name=x[1], e1=x[3], e2=x[5]),
+        lambda x: Let(key=x[1], e1=x[3], e2=x[5]),
     )
 
 
