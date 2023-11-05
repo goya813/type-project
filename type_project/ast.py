@@ -50,11 +50,12 @@ class If:
 
 @dataclass
 class Let:
+    name: str
     e1: Any
     e2: Any
 
     def __str__(self):
-        return f"let {self.e1} in {self.e2}"
+        return f"let {self.name} = {self.e1} in {self.e2}"
 
 
 @dataclass
