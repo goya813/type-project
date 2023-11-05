@@ -38,3 +38,5 @@ class Judgement:
 
 
 Expr = Any
+Value = int | bool
+

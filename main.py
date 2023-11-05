@@ -1,5 +1,33 @@
-from type_project.ast import Expr, Plus, Minus, Times, Lt, If, Judgement
-from type_project.parser import parser_expr
+from dataclasses import dataclass
+from typing import Any, TypeVar, Generic, Iterable, Callable, TypeVarTuple
+from type_project.ast import *
+
+class ErrorPlusErrorL(Exception):
+    pass
+
+
+class ErrorPlusBoolL(Exception):
+    def __init__(self, e1: bool, e2: Any):
+        self.e1 = e1
+        self.e2 = e2
+
+
+class ErrorPlusBoolR(Exception):
+    def __init__(self, e1: Any, e2: bool):
+        self.e1 = e1
+        self.e2 = e2
+
+
+class ErrorLtBoolL(Exception):
+    def __init__(self, e1: bool, e2: Any):
+        self.e1 = e1
+        self.e2 = e2
+
+
+class ErrorLtBoolR(Exception):
+    def __init__(self, e1: Any, e2: bool):
+        self.e1 = e1
+        self.e2 = e2
 
 
 def is_int(x):
@@ -49,6 +77,12 @@ def solve_value(e: Expr) -> Value:
             match (v1_is_int, v2_is_int):
                 case (True, True):
                     return v1 < v2
+                case (False, False):
+                    raise ErrorLtBoolL(v1, v2)
+                case (False, True):
+                    raise ErrorLtBoolL(v1, v2)
+                case (True, False):
+                    raise ErrorLtBoolR(v1, v2)
                 case _:
                     raise Exception(f"evalto error")
         case If(e1, e2, e3):
@@ -117,31 +151,59 @@ def solve(e: Expr) -> str:
                     result += f"{e1} * {e2} evalto error\n"
         case If(e1, e2, e3):
             x1 = solve_value(e1)
-            if x1:
-                x2 = solve_value(e2)
-                result += f"{e} evalto {x2} by E-IfT" + "{\n"
-                result += solve(e1)
-                result += solve(e2)
+            is_bool = isinstance(x1, bool)
+            if is_bool:
+                if x1:
+                    try:
+                        x2 = solve_value(e2)
+                        result += f"{e} evalto {x2} by E-IfT" + "{\n"
+                        result += solve(e1)
+                        result += solve(e2)
+                    except:
+                        result += f"{e} evalto error by E-IfTError" + "{\n"
+                        result += solve(e1)
+                        result += solve(e2)
+                        result += "};\n"
+                else:
+                    try:
+                        x3 = solve_value(e3)
+                        result += f"{e} evalto {x3} by E-IfF" + "{\n"
+                        result += solve(e1)
+                        result += solve(e3)
+                        result += "};\n"
+                    except:
+                        result += f"{e} evalto error by E-IfFError" + "{\n"
+                        result += solve(e1)
+                        result += solve(e3)
+                        result += "};\n"
             else:
-                x3 = solve_value(e3)
-                result += f"{e} evalto {x3} by E-IfF" + "{\n"
+                result += f"{e} evalto error by E-IfInt" + "{\n"
                 result += solve(e1)
-                result += solve(e3)
-            print("};")
+                result += "};\n"
         case Lt(e1, e2):
-            v1 = solve_value(e1)
-            v2 = solve_value(e2)
-            if v1 < v2:
-                result += f"{e1} < {e2} evalto true by E-Lt" + "{\n"
-                result += solve(e1)
-                result += solve(e2)
-                result += f" {v1} less than {v2} is true by B-Lt" + "{};\n"
-            else:
-                result += f"{e1} < {e2} evalto false by E-Lt" + "{\n"
-                result += solve(e1)
-                result += solve(e2)
-                result += f" {v1} less than {v2} is false by B-Lt" + "{};\n"
-            result += "};\n"
+            try:
+                is_true = solve_value(e)
+                v1 = solve_value(e1)
+                v2 = solve_value(e2)
+                if is_true:
+                    result += f"{e1} < {e2} evalto true by E-Lt" + "{\n"
+                    result += solve(e1)
+                    result += solve(e2)
+                    result += f" {v1} less than {v2} is true by B-Lt" + "{};\n"
+                else:
+                    result += f"{e1} < {e2} evalto false by E-Lt" + "{\n"
+                    result += solve(e1)
+                    result += solve(e2)
+                    result += f" {v1} less than {v2} is false by B-Lt" + "{};\n"
+                result += "};\n"
+            except ErrorLtBoolL:
+                result += f"{e1} < {e2} evalto error by E-LtBoolL" + "{\n"
+                result += f"{e1} evalto {e1} by E-Bool" + "{};\n"
+                result += "};\n"
+            except ErrorLtBoolR:
+                result += f"{e1} < {e2} evalto error by E-LtBoolR" + "{\n"
+                result += f"{e2} evalto {e2} by E-Bool" + "{};\n"
+                result += "};\n"
         case int(x):
             result += f"{x} evalto {x} by E-Int" + "{};\n"
         case bool(x):
@@ -149,24 +211,21 @@ def solve(e: Expr) -> str:
 
     return result
 
-
-def solve_e_plus(e: Plus):
-    return e.a + e.b
-
-
-def solve_e_minus(e: Plus):
-    return e.a + e.b
-
-
 if __name__ == '__main__':
-    e = Plus(Plus(1, True), 2)
-    j = Judgement(e, "error")
+    # e = Plus(Plus(1, True), 2)
+    # j = Judgement(e, "error")
     # e = Plus(Plus(3, If(Lt(-23, Times(-2, 8)), 8, 2)), 4)
     # j = Judgement(e, 15)
     # e = Times(Plus(4, 5), Minus(1, 10))
     # j = Judgement(e, -81)
     # e = Minus(Minus(8, 2), 3)
     # j = Judgement(e, 3)
+    # e = If(Plus(2, 3), 1, 3)
+    # j = Judgement(e, "error")
+    # e = If(Plus(2, 3), 1, 3)
+    # j = Judgement(e, "error")
+    e = If(Lt(3, 4), Lt(1, True), Minus(3, False))
+    j = Judgement(e, "error")
     """
     3 + if -23 < -2 * 8 then 8 else 2 + 4 evalto 11
     3 + (if -23 < -2 * 8 then 8 else 2) + 4 evalto 15
@@ -201,9 +260,9 @@ if __name__ == '__main__':
      };
     };
     """
-    # result = solve(j.e)
-    # print(result.replace("True", "true").replace("False", "false"))
-    parsed_expr = parser_expr("1+2")
-    result = solve(parsed_expr.return_value)
-
+    result = solve(j.e)
     print(result.replace("True", "true").replace("False", "false"))
+    # parsed_expr = parser_expr("if 2 + 3 then 1 else 3 evalto error")
+    # result = solve(parsed_expr.return_value)
+
+    # print(result.replace("True", "true").replace("False", "false"))
