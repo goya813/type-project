@@ -1,7 +1,8 @@
 from typing import Any, Callable, TypeVar
-from nompy import StrParser, MapExceptionError, StrParserResult, take_while, tag, parser_map, alt, sequence, many0
+from nompy import StrParser, MapExceptionError, StrParserResult, take_while, tag, parser_map, alt, sequence, many0, \
+    sequence2
 
-from type_project.ast import Expr, If, Lt, Plus, Minus, Times
+from type_project.ast import Expr, If, Lt, Plus, Minus, Times, Let, Var
 
 T = TypeVar("T")
 V = TypeVar("V")
@@ -41,8 +42,12 @@ def parser_unary() -> StrParser[Expr, str]:
         parser_paren_expr(),
         parser_int(),
         parser_bool(),
+        parser_var(),
     ])
 
+
+def parser_var() -> StrParser[Expr, str]:
+    return parser_map(parser_name(), Var)
 
 def assoc_left(head: Expr, tail: list[tuple[str, Expr]]) -> Any:
     if len(tail) == 0:
@@ -80,6 +85,9 @@ def parser_if() -> StrParser[If, str]:
     )
 
 
+def parser_let() -> StrParser[Let, str]:
+    return parser_map(skip_space_sequence((tag("let"), parser_name(), tag("="), parser_expr, tag("in"), parser_expr)), lambda x: Let(name=x[1], e1=x[3], e2=x[5]))
+
 def skip_space_sequence(parsers: StrParser[Any, Any]) -> StrParser[Any, Any]:
     ret_parsers = []
     for p in parsers:
@@ -90,10 +98,14 @@ def skip_space_sequence(parsers: StrParser[Any, Any]) -> StrParser[Any, Any]:
 
 def parser_expr(s: str) -> StrParserResult[Expr, str]:
     return alt([
+        parser_let(),
         parser_lt(),
         parser_if(),
     ])(s)
 
+
+def parser_name() -> StrParser[str, str]:
+    return take_while(str.isalnum)
 
 if __name__ == '__main__':
     print(parser_expr("1+2"))
@@ -102,3 +114,4 @@ if __name__ == '__main__':
     print(parser_expr("1 * 2 + 3"))
     print(parser_expr("if 4 < 5 then 1 else 2"))
     print(parser_expr("if 4 < 5 + 1 then 1 else 2"))
+    print(parser_expr("let x = 1 in x + 1"))

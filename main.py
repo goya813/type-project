@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any, TypeVar, Generic, Iterable, Callable, TypeVarTuple
-from type_project.ast import *
+from type_project.tp_ast import *
+from type_project.parser import parser_expr
+
 
 class ErrorPlusErrorL(Exception):
     pass
@@ -260,9 +262,9 @@ if __name__ == '__main__':
      };
     };
     """
-    result = solve(j.e)
     print(result.replace("True", "true").replace("False", "false"))
     # parsed_expr = parser_expr("if 2 + 3 then 1 else 3 evalto error")
     # result = solve(parsed_expr.return_value)
 
     # print(result.replace("True", "true").replace("False", "false"))
+    print(parser_expr("let x = 1 in x + 1"))
