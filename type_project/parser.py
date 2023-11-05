@@ -98,7 +98,10 @@ def parser_times() -> StrParser[Times, str]:
 def parser_plus_minus() -> StrParser[list[Plus | Minus], str]:
     return parser_map(
         skip_space_sequence(
-            (parser_times(), many0(skip_space_sequence((tag("+"), parser_times()))))
+            (
+                parser_times(),
+                many0(skip_space_sequence((alt((tag("+"), tag("-"))), parser_times()))),
+            )
         ),
         lambda x: assoc_left(x[0], x[1]),
     )
@@ -137,7 +140,7 @@ def parser_let() -> StrParser[Let, str]:
         skip_space_sequence(
             (tag("let"), parser_name(), tag("="), parser_expr, tag("in"), parser_expr)
         ),
-        lambda x: Let(name=x[1], e1=x[3], e2=x[5]),
+        lambda x: Let(key=x[1], e1=x[3], e2=x[5]),
     )
 
 
@@ -153,14 +156,19 @@ def parser_expr(s: str) -> StrParserResult[Expr, str]:
     return alt(
         [
             parser_let(),
-            parser_lt(),
             parser_if(),
+            parser_lt(),
         ]
     )(s)
 
 
 def parser_name() -> StrParser[str, str]:
-    return take_while(str.isalnum)
+    def is_not_keyword(s):
+        if s in {"let", "if", "then", "else"}:
+            raise ValueError
+        return s
+
+    return parser_map_exception(take_while(str.isalnum), is_not_keyword)
 
 
 if __name__ == "__main__":
