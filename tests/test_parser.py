@@ -26,7 +26,7 @@ def test_environment():
     assert pret.error is None
     assert pret.remain == ""
 
-    assert  pret.return_value == Env([("x", 3), ("y", 2), ("z", True)])
+    assert pret.return_value == Env([("x", 3), ("y", 2), ("z", True)])
 
 
 def test_judge():
@@ -35,4 +35,4 @@ def test_judge():
     assert pret.error is None
     assert pret.remain == ""
 
-    assert  pret.return_value == Judgement(Env([("x", 3), ("y", 2)]), Plus(1, 1), 2)
+    assert pret.return_value == Judgement(Env([("x", 3), ("y", 2)]), Plus(1, 1), 2)

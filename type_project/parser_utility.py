@@ -1,4 +1,11 @@
-from nompy import StrParser, parser_map, sequence2, StrParserResult, take_while, sequence
+from nompy import (
+    StrParser,
+    parser_map,
+    sequence2,
+    StrParserResult,
+    take_while,
+    sequence,
+)
 
 
 def terminated(first: StrParser, second: StrParser) -> StrParser:
@@ -15,6 +22,7 @@ def delimited(first: StrParser, second: StrParser, third: StrParser) -> StrParse
 
 def wraped(target: StrParser, wrap: StrParser) -> StrParser:
     return delimited(wrap, target, wrap)
+
 
 def opt[V, E](parser: StrParser[V, E]) -> StrParser[V, E]:
     def new_parser(s: str) -> StrParserResult:

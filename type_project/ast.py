@@ -70,7 +70,6 @@ class Var:
         return self.key
 
 
-
 @dataclass
 class Var:
     key: str

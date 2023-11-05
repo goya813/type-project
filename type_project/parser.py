@@ -12,8 +12,27 @@ from nompy import (
     sequence2,
 )
 
-from type_project.ast import Expr, If, Lt, Plus, Minus, Times, Let, Var, Env, Value, Judgement
-from type_project.parser_utility import terminated, opt, preceded, delimited, space, wraped
+from type_project.ast import (
+    Expr,
+    If,
+    Lt,
+    Plus,
+    Minus,
+    Times,
+    Let,
+    Var,
+    Env,
+    Value,
+    Judgement,
+)
+from type_project.parser_utility import (
+    terminated,
+    opt,
+    preceded,
+    delimited,
+    space,
+    wraped,
+)
 
 T = TypeVar("T")
 V = TypeVar("V")
@@ -66,10 +85,12 @@ def parser_unary() -> StrParser[Expr, str]:
 
 
 def parser_value() -> StrParser[Value, str]:
-    return alt([
-        parser_int(),
-        parser_bool(),
-    ])
+    return alt(
+        [
+            parser_int(),
+            parser_bool(),
+        ]
+    )
 
 
 def parser_var() -> StrParser[Expr, str]:
@@ -170,7 +191,10 @@ def parser_expr(s: str) -> StrParserResult[Expr, str]:
 
 
 def parser_bind() -> StrParser[tuple[str, Value]]:
-    return parser_map(skip_space_sequence((parser_name(), tag("="), parser_value())), lambda x: (x[0], x[2]))
+    return parser_map(
+        skip_space_sequence((parser_name(), tag("="), parser_value())),
+        lambda x: (x[0], x[2]),
+    )
 
 
 def parser_name() -> StrParser[str, str]:
@@ -194,16 +218,34 @@ def parser_environment() -> StrParser[Env, str]:
             env = env.push(b[0], b[1])
         return env
 
-    return parser_map(skip_space_sequence((opt(parser_bind()), many0(preceded(wraped(tag(","), space()), parser_bind())))), create_env)
+    return parser_map(
+        skip_space_sequence(
+            (
+                opt(parser_bind()),
+                many0(preceded(wraped(tag(","), space()), parser_bind())),
+            )
+        ),
+        create_env,
+    )
 
 
 def parser_judge() -> StrParser[Judgement]:
     def f(x):
         return Judgement(x[0], x[2], x[4])
 
-    return parser_map(skip_space_sequence((
-        parser_environment(), tag("|-"), parser_expr, tag("evalto"), parser_value()
-    )), f)
+    return parser_map(
+        skip_space_sequence(
+            (
+                parser_environment(),
+                tag("|-"),
+                parser_expr,
+                tag("evalto"),
+                parser_value(),
+            )
+        ),
+        f,
+    )
+
 
 if __name__ == "__main__":
     print(parser_expr("1+2"))
