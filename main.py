@@ -18,6 +18,23 @@ def infer(env: Env, e: Expr, v: Value = None) -> Derivation:
     def by(v: Value, rule: str, premises: list["Derivation | str"]) -> Derivation:
         return Derivation(Judgement(env, e, v), rule, premises)
 
+    def by_int2(name: str, op: str, fn, e1: Expr, e2: Expr):
+        d1 = infer(env, e1)
+        d2 = infer(env, e2)
+        match (d1.val(), d2.val()):
+            case (bool(), _):
+                return by(Error(), f"E-{name}BoolL", [d1])
+            case (Error(), _):
+                return by(Error(), f"E-{name}ErrorL", [d1])
+            case (_, bool()):
+                return by(Error(), f"E-{name}BoolR", [d2])
+            case (_, Error()):
+                return by(Error(), f"E-{name}ErrorR", [d2])
+            case (int(l), int(r)):
+                v = fn(l, r)
+                d3 = f"{l} {op} {r} is {v} by B-{name}" + "{}"
+                return by(v, f"E-{name}", [d1, d2, d3])
+
     match e:
         case Var(e1):
             k, v = env.vars[-1]
@@ -27,89 +44,13 @@ def infer(env: Env, e: Expr, v: Value = None) -> Derivation:
                 d = infer(env.pop(), e)
                 return by(d.val(), "E-Var2", [d])
         case Plus(e1, e2):
-            node = "Plus"
-            op = lambda x, y: x + y
-            d1 = infer(env, e1)
-            d2 = infer(env, e2)
-            match (d1.val(), d2.val()):
-                case (bool(), _):
-                    return by(Error(), f"E-{node}BoolL", [d1])
-                case (Error(), _):
-                    return by(Error(), f"E-{node}ErrorL", [d1])
-                case (_, bool()):
-                    return by(Error(), f"E-{node}BoolR", [d2])
-                case (_, Error()):
-                    return by(Error(), f"E-{node}ErrorR", [d2])
-                case (int(l), int(r)):
-                    v = op(l, r)
-                    return by(
-                        v,
-                        f"E-{node}",
-                        [d1, d2, f"{l} {node.lower()} {r} is {v} by B-{node}" + "{}"],
-                    )
+            return by_int2("Plus", "plus", lambda x, y: x + y, e1, e2)
         case Minus(e1, e2):
-            node = "Minus"
-            op = lambda x, y: x - y
-            d1 = infer(env, e1)
-            d2 = infer(env, e2)
-            match (d1.val(), d2.val()):
-                case (bool(), _):
-                    return by(Error(), f"E-{node}BoolL", [d1])
-                case (Error(), _):
-                    return by(Error(), f"E-{node}ErrorL", [d1])
-                case (_, bool()):
-                    return by(Error(), f"E-{node}BoolR", [d2])
-                case (_, Error()):
-                    return by(Error(), f"E-{node}ErrorR", [d2])
-                case (int(l), int(r)):
-                    v = op(l, r)
-                    return by(
-                        v,
-                        f"E-{node}",
-                        [d1, d2, f"{l} {node.lower()} {r} is {v} by B-{node}" + "{}"],
-                    )
+            return by_int2("Minus", "minus", lambda x, y: x - y, e1, e2)
         case Times(e1, e2):
-            node = "Times"
-            op = lambda x, y: x * y
-            d1 = infer(env, e1)
-            d2 = infer(env, e2)
-            match (d1.val(), d2.val()):
-                case (bool(), _):
-                    return by(Error(), f"E-{node}BoolL", [d1])
-                case (Error(), _):
-                    return by(Error(), f"E-{node}ErrorL", [d1])
-                case (_, bool()):
-                    return by(Error(), f"E-{node}BoolR", [d2])
-                case (_, Error()):
-                    return by(Error(), f"E-{node}ErrorR", [d2])
-                case (int(l), int(r)):
-                    v = op(l, r)
-                    return by(
-                        v,
-                        f"E-{node}",
-                        [d1, d2, f"{l} {node.lower()} {r} is {v} by B-{node}" + "{}"],
-                    )
+            return by_int2("Times", "times", lambda x, y: x * y, e1, e2)
         case Lt(e1, e2):
-            node = "Lt"
-            op = lambda x, y: x < y
-            d1 = infer(env, e1)
-            d2 = infer(env, e2)
-            match (d1.val(), d2.val()):
-                case (bool(), _):
-                    return by(Error(), f"E-{node}BoolL", [d1])
-                case (Error(), _):
-                    return by(Error(), f"E-{node}ErrorL", [d1])
-                case (_, bool()):
-                    return by(Error(), f"E-{node}BoolR", [d2])
-                case (_, Error()):
-                    return by(Error(), f"E-{node}ErrorR", [d2])
-                case (int(l), int(r)):
-                    v = op(l, r)
-                    return by(
-                        v,
-                        f"E-{node}",
-                        [d1, d2, f"{l} less than {r} is {v} by B-{node}" + "{}"],
-                    )
+            return by_int2("Lt", "less than", lambda x, y: x < y, e1, e2)
         case If(e1, e2, e3):
             d1 = infer(env, e1)
             match d1.val():
