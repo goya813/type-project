@@ -7,6 +7,14 @@ Value = int | bool
 
 
 @dataclass
+class Error:
+    pass
+
+    def __str__(self):
+        return "error"
+
+
+@dataclass
 class Plus:
     e1: Any
     e2: Any
@@ -71,12 +79,6 @@ class Var:
 
 
 @dataclass
-class Judgement:
-    e: Any
-    v: Any
-
-
-@dataclass
 class Var:
     key: str
 
@@ -101,3 +103,22 @@ class Env:
             if k == key:
                 return v
         raise KeyError(f"key {key} not found")
+
+    def __str__(self):
+        return ",".join([f"{k}={v}" for k, v in self.vars])
+
+
+@dataclass
+class Judgement:
+    env: Env | None
+    e: Any
+    v: Any
+
+    def __str__(self):
+        prefix = ""
+        if self.env:
+            prefix = str(self.env)
+            if prefix:
+                prefix += " "
+            prefix += "|- "
+        return f"{prefix}{self.e} evalto {self.v}"
