@@ -81,7 +81,7 @@ def infer(env: Env, e: Expr, v: Value = None) -> Derivation:
             return by(x, "E-Bool", [])
         case int(x):
             return by(x, "E-Int", [])
-    raise Exception(j)
+    raise Exception(env, e, v)
 
 
 def pp(d: Derivation | str, depth=0) -> str:
