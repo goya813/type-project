@@ -10,168 +10,136 @@ class Derivation:
     rule: str
     premises: list["Derivation | str"]
 
+    def val(self) -> Value:
+        return self.conclusion.v
 
-def infer(j: Judgement) -> Derivation:
-    env = j.env
-    e = j.e
+
+def infer(env: Env, e: Expr, v: Value = None) -> Derivation:
+    def by(v: Value, rule: str, premises: list["Derivation | str"]) -> Derivation:
+        return Derivation(Judgement(env, e, v), rule, premises)
+
     match e:
         case Var(e1):
             k, v = env.vars[-1]
             if e1 == k:
-                return Derivation(Judgement(env, e, v), "E-Var1", [])
+                return by(v, "E-Var1", [])
             else:
-                d = infer(Judgement(env.pop(), e, None))
-                return Derivation(Judgement(env, e, d.conclusion.v), "E-Var2", [d])
+                d = infer(env.pop(), e)
+                return by(d.val(), "E-Var2", [d])
         case Plus(e1, e2):
             node = "Plus"
             op = lambda x, y: x + y
-            d1 = infer(Judgement(env, e1, None))
-            d2 = infer(Judgement(env, e2, None))
-            match (d1.conclusion.v, d2.conclusion.v):
+            d1 = infer(env, e1)
+            d2 = infer(env, e2)
+            match (d1.val(), d2.val()):
                 case (bool(), _):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}BoolL", [d1]
-                    )
+                    return by(Error(), f"E-{node}BoolL", [d1])
                 case (Error(), _):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}ErrorL", [d1]
-                    )
+                    return by(Error(), f"E-{node}ErrorL", [d1])
                 case (_, bool()):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}BoolR", [d2]
-                    )
+                    return by(Error(), f"E-{node}BoolR", [d2])
                 case (_, Error()):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}ErrorR", [d2]
-                    )
+                    return by(Error(), f"E-{node}ErrorR", [d2])
                 case (int(l), int(r)):
                     v = op(l, r)
-                    return Derivation(
-                        Judgement(env, e, v),
+                    return by(
+                        v,
                         f"E-{node}",
                         [d1, d2, f"{l} {node.lower()} {r} is {v} by B-{node}" + "{}"],
                     )
         case Minus(e1, e2):
             node = "Minus"
             op = lambda x, y: x - y
-            d1 = infer(Judgement(env, e1, None))
-            d2 = infer(Judgement(env, e2, None))
-            match (d1.conclusion.v, d2.conclusion.v):
+            d1 = infer(env, e1)
+            d2 = infer(env, e2)
+            match (d1.val(), d2.val()):
                 case (bool(), _):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}BoolL", [d1]
-                    )
+                    return by(Error(), f"E-{node}BoolL", [d1])
                 case (Error(), _):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}ErrorL", [d1]
-                    )
+                    return by(Error(), f"E-{node}ErrorL", [d1])
                 case (_, bool()):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}BoolR", [d2]
-                    )
+                    return by(Error(), f"E-{node}BoolR", [d2])
                 case (_, Error()):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}ErrorR", [d2]
-                    )
+                    return by(Error(), f"E-{node}ErrorR", [d2])
                 case (int(l), int(r)):
                     v = op(l, r)
-                    return Derivation(
-                        Judgement(env, e, v),
+                    return by(
+                        v,
                         f"E-{node}",
                         [d1, d2, f"{l} {node.lower()} {r} is {v} by B-{node}" + "{}"],
                     )
         case Times(e1, e2):
             node = "Times"
             op = lambda x, y: x * y
-            d1 = infer(Judgement(env, e1, None))
-            d2 = infer(Judgement(env, e2, None))
-            match (d1.conclusion.v, d2.conclusion.v):
+            d1 = infer(env, e1)
+            d2 = infer(env, e2)
+            match (d1.val(), d2.val()):
                 case (bool(), _):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}BoolL", [d1]
-                    )
+                    return by(Error(), f"E-{node}BoolL", [d1])
                 case (Error(), _):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}ErrorL", [d1]
-                    )
+                    return by(Error(), f"E-{node}ErrorL", [d1])
                 case (_, bool()):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}BoolR", [d2]
-                    )
+                    return by(Error(), f"E-{node}BoolR", [d2])
                 case (_, Error()):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}ErrorR", [d2]
-                    )
+                    return by(Error(), f"E-{node}ErrorR", [d2])
                 case (int(l), int(r)):
                     v = op(l, r)
-                    return Derivation(
-                        Judgement(env, e, v),
+                    return by(
+                        v,
                         f"E-{node}",
                         [d1, d2, f"{l} {node.lower()} {r} is {v} by B-{node}" + "{}"],
                     )
         case Lt(e1, e2):
             node = "Lt"
             op = lambda x, y: x < y
-            d1 = infer(Judgement(env, e1, None))
-            d2 = infer(Judgement(env, e2, None))
-            match (d1.conclusion.v, d2.conclusion.v):
+            d1 = infer(env, e1)
+            d2 = infer(env, e2)
+            match (d1.val(), d2.val()):
                 case (bool(), _):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}BoolL", [d1]
-                    )
+                    return by(Error(), f"E-{node}BoolL", [d1])
                 case (Error(), _):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}ErrorL", [d1]
-                    )
+                    return by(Error(), f"E-{node}ErrorL", [d1])
                 case (_, bool()):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}BoolR", [d2]
-                    )
+                    return by(Error(), f"E-{node}BoolR", [d2])
                 case (_, Error()):
-                    return Derivation(
-                        Judgement(env, e, Error()), f"E-{node}ErrorR", [d2]
-                    )
+                    return by(Error(), f"E-{node}ErrorR", [d2])
                 case (int(l), int(r)):
                     v = op(l, r)
-                    return Derivation(
-                        Judgement(env, e, v),
+                    return by(
+                        v,
                         f"E-{node}",
                         [d1, d2, f"{l} less than {r} is {v} by B-{node}" + "{}"],
                     )
         case If(e1, e2, e3):
-            d1 = infer(Judgement(env, e1, None))
-            match d1.conclusion.v:
+            d1 = infer(env, e1)
+            match d1.val():
                 case True:
-                    d2 = infer(Judgement(env, e2, None))
-                    match d2.conclusion.v:
+                    d2 = infer(env, e2)
+                    match d2.val():
                         case Error():
-                            return Derivation(
-                                Judgement(env, e, Error()), "E-IfTError", [d1, d2]
-                            )
+                            return by(Error(), "E-IfTError", [d1, d2])
                         case v:
-                            return Derivation(Judgement(env, e, v), "E-IfT", [d1, d2])
+                            return by(v, "E-IfT", [d1, d2])
                 case False:
-                    d3 = infer(Judgement(env, e3, None))
-                    match d3.conclusion.v:
+                    d3 = infer(env, e3)
+                    match d3.val():
                         case Error():
-                            return Derivation(
-                                Judgement(env, e, Error()), "E-IfFError", [d1, d3]
-                            )
+                            return by(Error(), "E-IfFError", [d1, d3])
                         case v:
-                            return Derivation(Judgement(env, e, v), "E-IfF", [d1, d3])
+                            return by(v, "E-IfF", [d1, d3])
                 case Error():
-                    return Derivation(Judgement(env, e, Error()), "E-IfError", [d1])
+                    return by(Error(), "E-IfError", [d1])
                 case int():
-                    return Derivation(Judgement(env, e, Error()), "E-IfInt", [d1])
+                    return by(Error(), "E-IfInt", [d1])
 
         case Let(key, e1, e2):
-            d1 = infer(Judgement(env, e1, None))
-            d2 = infer(Judgement(env.push(key, d1.conclusion.v), e2, None))
-            return Derivation(Judgement(env, e, d2.conclusion.v), "E-Let", [d1, d2])
+            d1 = infer(env, e1)
+            d2 = infer(env.push(key, d1.val()), e2)
+            return by(d2.val(), "E-Let", [d1, d2])
         case bool(x):
-            return Derivation(Judgement(env, e, x), "E-Bool", [])
+            return by(x, "E-Bool", [])
         case int(x):
-            return Derivation(Judgement(env, e, x), "E-Int", [])
+            return by(x, "E-Int", [])
     raise Exception(j)
 
 
@@ -240,7 +208,7 @@ if __name__ == "__main__":
      };
     };
     """
-    result = pp(infer(j))
+    result = pp(infer(j.env, j.e, j.v))
     print(result.replace("True", "true").replace("False", "false"))
     # parsed_expr = parser_expr("if 2 + 3 then 1 else 3 evalto error")
     # result = solve(parsed_expr.return_value)
