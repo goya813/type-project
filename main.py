@@ -37,7 +37,7 @@ def infer(env: Env, e: Expr, v: Value = None) -> Derivation:
 
     match e:
         case Var(e1):
-            k, v = env.vars[-1]
+            k, v = env.top()
             if e1 == k:
                 return by(v, "E-Var1", [])
             else:

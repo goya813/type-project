@@ -95,6 +95,9 @@ class Env:
 
     def push(self, key: str, value: Value):
         return Env(self.vars + [(key, value)])
+    
+    def top(self) -> (str, Value):
+        return self.vars[-1]
 
     def lookup(self, key):
         for k, v in self.vars[::-1]:
