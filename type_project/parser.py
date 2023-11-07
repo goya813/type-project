@@ -12,7 +12,7 @@ from nompy import (
     sequence2,
 )
 
-from type_project.ast import Expr, If, Lt, Plus, Minus, Times, Let, Var
+from type_project.ast import Expr, If, Lt, Plus, Minus, Times, Let, Var, Error
 
 T = TypeVar("T")
 V = TypeVar("V")
@@ -48,6 +48,10 @@ def parser_bool() -> StrParser[bool, str]:
     return parser_map(alt([tag("true"), tag("false")]), lambda x: x == "true")
 
 
+def parser_error() -> StrParser[Error, str]:
+    return parser_map(tag("error"), lambda x: Error())
+
+
 def parser_paren_expr() -> StrParser[Expr, str]:
     return parser_map_exception(
         skip_space_sequence((tag("("), parser_expr, tag(")"))), lambda x: x[1]
@@ -60,6 +64,7 @@ def parser_unary() -> StrParser[Expr, str]:
             parser_paren_expr(),
             parser_int(),
             parser_bool(),
+            parser_error(),
             parser_var(),
         ]
     )
