@@ -1,6 +1,7 @@
 from type_project.ast import *
 from type_project.parser import parser_expr
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 
@@ -15,10 +16,12 @@ class Derivation:
 
 
 def infer(env: Env, e: Expr, v: Value = None) -> Derivation:
-    def by(v: Value, rule: str, premises: list["Derivation | str"]) -> Derivation:
+    def by(v: Value, rule: str, premises: list[Derivation | str]) -> Derivation:
         return Derivation(Judgement(env, e, v), rule, premises)
 
-    def by_int2(name: str, op: str, fn, e1: Expr, e2: Expr):
+    def by_int2(
+        fn: Callable[[int, int], Value], op: str, name: str, e1: Expr, e2: Expr
+    ) -> Derivation:
         d1 = infer(env, e1)
         d2 = infer(env, e2)
         match (d1.val(), d2.val()):
@@ -44,13 +47,13 @@ def infer(env: Env, e: Expr, v: Value = None) -> Derivation:
                 d = infer(env.pop(), e)
                 return by(d.val(), "E-Var2", [d])
         case Plus(e1, e2):
-            return by_int2("Plus", "plus", lambda x, y: x + y, e1, e2)
+            return by_int2(lambda x, y: x + y, "plus", "Plus", e1, e2)
         case Minus(e1, e2):
-            return by_int2("Minus", "minus", lambda x, y: x - y, e1, e2)
+            return by_int2(lambda x, y: x - y, "minus", "Minus", e1, e2)
         case Times(e1, e2):
-            return by_int2("Times", "times", lambda x, y: x * y, e1, e2)
+            return by_int2(lambda x, y: x * y, "times", "Times", e1, e2)
         case Lt(e1, e2):
-            return by_int2("Lt", "less than", lambda x, y: x < y, e1, e2)
+            return by_int2(lambda x, y: x < y, "less than", "Lt", e1, e2)
         case If(e1, e2, e3):
             d1 = infer(env, e1)
             match d1.val():
