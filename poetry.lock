@@ -35,7 +35,7 @@ develop = false
 type = "git"
 url = "https://github.com/higumachan/nompy.git"
 reference = "HEAD"
-resolved_reference = "9275da9d65498deb597cce55a8a7dcb274f1c10a"
+resolved_reference = "9bb96287554cc3750439f49de575f0072b147ba4"
 
 [[package]]
 name = "packaging"

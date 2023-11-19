@@ -285,6 +285,8 @@ def parser_name() -> StrParser[str, str]:
 
 def parser_environment() -> StrParser[Env, str]:
     def create_env(x):
+        if x is None:
+            return Env([])
         bind_head = x[0]
 
         env = Env([])
@@ -296,10 +298,12 @@ def parser_environment() -> StrParser[Env, str]:
         return env
 
     return parser_map(
-        skip_space_sequence(
-            (
-                opt(parser_bind()),
-                many0(preceded(wraped(tag(","), space0()), parser_bind())),
+        opt(
+            skip_space_sequence(
+                (
+                    parser_bind(),
+                    many0(preceded(wraped(tag(","), space0()), parser_bind())),
+                )
             )
         ),
         create_env,

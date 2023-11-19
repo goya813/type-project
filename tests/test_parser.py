@@ -1,3 +1,5 @@
+from nompy import tag, many0, sequence
+
 from type_project.ast import (
     Let,
     Value,
@@ -12,7 +14,15 @@ from type_project.ast import (
     LetRec,
     Index,
 )
-from type_project.parser import parser_expr, parser_environment, parser_judge
+from type_project.parser import (
+    parser_expr,
+    parser_environment,
+    parser_judge,
+    skip_space_sequence,
+    parser_bind,
+    parser_value,
+)
+from type_project.parser_utility import opt, preceded, wraped, space0
 
 
 def test_let():
@@ -115,3 +125,12 @@ def test_nameless_form():
     assert pret.remain == ""
 
     assert pret.return_value == FunctionEval(".", Index(1))
+
+
+def test_real_parser_error():
+    pret = parser_judge()(
+        "|- let max = fun x -> fun y -> if x < y then y else x in max 3 5 evalto 5"
+    )
+
+    assert pret.error is None
+    assert pret.remain == ""
