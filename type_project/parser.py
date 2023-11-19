@@ -35,8 +35,9 @@ from type_project.parser_utility import (
     opt,
     preceded,
     delimited,
-    space,
+    space0,
     wraped,
+    space1,
 )
 
 T = TypeVar("T")
@@ -146,7 +147,7 @@ def parser_apply() -> StrParser[FunctionApply | Expr, str]:
             (
                 parser_unary(),
                 many0(
-                    preceded(tag(" "), parser_unary()),
+                    preceded(space1(), parser_unary()),
                 ),
             )
         ),
@@ -263,7 +264,7 @@ def parser_environment() -> StrParser[Env, str]:
         skip_space_sequence(
             (
                 opt(parser_bind()),
-                many0(preceded(wraped(tag(","), space()), parser_bind())),
+                many0(preceded(wraped(tag(","), space0()), parser_bind())),
             )
         ),
         create_env,

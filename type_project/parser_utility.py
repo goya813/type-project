@@ -5,6 +5,7 @@ from nompy import (
     StrParserResult,
     take_while,
     sequence,
+    parser_map_exception,
 )
 
 
@@ -34,5 +35,14 @@ def opt[V, E](parser: StrParser[V, E]) -> StrParser[V, E]:
     return new_parser
 
 
-def space() -> StrParser:
+def space0() -> StrParser:
     return take_while(lambda c: c in " \t\n")
+
+
+def space1() -> StrParser:
+    def f(x: str):
+        if len(x) == 0:
+            raise ValueError
+        return x
+
+    return parser_map_exception(take_while(lambda c: c in " \t\n"), f)
