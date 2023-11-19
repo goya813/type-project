@@ -29,6 +29,7 @@ from type_project.ast import (
     FunctionEval,
     FunctionApply,
     LetRec,
+    Index,
 )
 
 from type_project.parser_utility import (
@@ -39,6 +40,7 @@ from type_project.parser_utility import (
     space0,
     wraped,
     space1,
+    number,
 )
 
 T = TypeVar("T")
@@ -93,6 +95,7 @@ def parser_unary() -> StrParser[Expr, str]:
             parser_bool(),
             parser_error(),
             parser_var(),
+            parser_index(),
         ]
     )
 
@@ -108,6 +111,10 @@ def parser_value() -> StrParser[Value, str]:
 
 def parser_var() -> StrParser[Expr, str]:
     return parser_map(parser_name(), Var)
+
+
+def parser_index() -> StrParser[Index, str]:
+    return parser_map(sequence2((tag("#"), number())), lambda x: Index(x[1]))
 
 
 def assoc_left(head: Expr, tail: list[tuple[str, Expr]]) -> Any:
@@ -224,7 +231,7 @@ def parser_letrec() -> StrParser[LetRec, str]:
 
 def parser_fun() -> StrParser[FunctionEval, str]:
     return parser_map(
-        skip_space_sequence((tag("fun"), parser_name(), tag("->"), parser_expr)),
+        skip_space_sequence((tag("fun"), parser_arg_name(), tag("->"), parser_expr)),
         lambda x: FunctionEval(x[1], x[3]),
     )
 
@@ -253,6 +260,15 @@ def parser_bind() -> StrParser[tuple[str, Value]]:
     return parser_map(
         skip_space_sequence((parser_name(), tag("="), parser_value())),
         lambda x: (x[0], x[2]),
+    )
+
+
+def parser_arg_name() -> StrParser[str, str]:
+    return alt(
+        (
+            parser_name(),
+            tag("."),
+        )
     )
 
 

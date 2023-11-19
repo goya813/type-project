@@ -107,11 +107,11 @@ class Var:
 
 
 @dataclass
-class Var:
-    key: str
+class Index:
+    index: int
 
     def __str__(self):
-        return self.key
+        return f"#{self.index}"
 
 
 class Env:

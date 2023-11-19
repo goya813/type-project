@@ -10,6 +10,7 @@ from type_project.ast import (
     FunctionApply,
     FunctionValue,
     LetRec,
+    Index,
 )
 from type_project.parser import parser_expr, parser_environment, parser_judge
 
@@ -98,3 +99,19 @@ def test_let_rec():
     assert pret.return_value == LetRec(
         "f", FunctionEval("x", Var("x")), FunctionApply(Var("f"), 1)
     )
+
+
+def test_nameless_form():
+    pret = parser_expr("#2 + #1")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == Plus(Index(2), Index(1))
+
+    pret = parser_expr("fun . -> #1")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == FunctionEval(".", Index(1))
