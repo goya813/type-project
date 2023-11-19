@@ -1,5 +1,5 @@
 from type_project.ast import *
-from type_project.parser import parser_expr
+from type_project.parser import parser_expr, parser_judge
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -80,6 +80,18 @@ def infer(env: Env, e: Expr, v: Value = None) -> Derivation:
             d1 = infer(env, e1)
             d2 = infer(env.push(key, d1.val()), e2)
             return by(d2.val(), "E-Let", [d1, d2])
+        case FunctionEval(arg_name, body):
+            return by(FunctionValue(env=env, eval=e), "E-Fun", [])
+        case FunctionApply(fun, arg):
+            d1 = infer(env, fun)
+            d2 = infer(env, arg)
+
+            fun_value: FunctionValue = d1.val()
+
+            arg_env = fun_value.env.push(fun_value.eval.arg_name, d2.val())
+            d3 = infer(arg_env, fun_value.eval.body)
+
+            return by(d3.val(), "E-App", [d1, d2, d3])
         case bool(x):
             return by(x, "E-Bool", [])
         case int(x):
@@ -111,13 +123,11 @@ if __name__ == "__main__":
     # j = Judgement(e, "error")
 
     env = Env([])
-    e = Let(
-        "x",
-        Let("y", Minus(3, 2), Times(Var("y"), Var("y"))),
-        Let("y", 4, Plus(Var("x"), Var("y"))),
-    )
-    # e = parser_expr("let x = let y = 3 - 2 in y * y in let y = 4 in x + y").return_value
-    j = Judgement(env, e, 5)
+    # e = Let("y", 2, FunctionEval("x", Plus(Var("x"), Var("y"))))
+    e = parser_expr("|- let a = 3 in let f = fun y -> y * a in let a = 5 in f 4 evalto 12")
+    print(e)
+    # j = parser_judge()("|- let max = fun x -> fun y -> if x < y then y else x in max 3 5 evalto 5")
+    # j = Judgement(env, e, 5)
     """
     3 + if -23 < -2 * 8 then 8 else 2 + 4 evalto 11
     3 + (if -23 < -2 * 8 then 8 else 2) + 4 evalto 15
@@ -152,7 +162,34 @@ if __name__ == "__main__":
      };
     };
     """
-    result = pp(infer(j.env, j.e, j.v))
+    """
+    |- let sq = fun x -> x * x in sq 3 + sq 4 evalto 25 by E-Let {
+     |- fun x -> x * x evalto ()[fun x -> x * x] by E-Fun{};
+     sq = ()[fun x -> x * x] |- sq 3 + sq 4 evalto 25 by E-Plus {
+      sq = ()[fun x -> x * x] |- sq 3 evalto 9 by E-App {
+       sq = ()[fun x -> x * x] |- sq evalto ()[fun x -> x * x] by E-Var1{};
+       sq = ()[fun x -> x * x] |- 3 evalto 3 by E-Int{};
+       x = 3 |- x * x evalto 9 by E-Times{
+        x = 3 |- x evalto 3 by E-Var1{};
+        x = 3 |- x evalto 3 by E-Var1{};
+        3 times 3 is 9 by B-Times{};
+       };
+      };
+      sq = ()[fun x -> x * x] |- sq 4 evalto 16 by E-App {
+       sq = ()[fun x -> x * x] |- sq evalto ()[fun x -> x * x] by E-Var1{};
+       sq = ()[fun x -> x * x] |- 4 evalto 4 by E-Int{};
+       x = 4 |- x * x evalto 16 by E-Times{
+        x = 4 |- x evalto 4 by E-Var1{};
+        x = 4 |- x evalto 4 by E-Var1{};
+        4 times 4 is 16 by B-Times{};
+       };
+      };
+      9 plus 16 is 25 by B-Plus{};
+     };
+    };
+    """
+    # result = pp(infer(j.env, j.e))
+    result = pp(infer(env, e))
     print(result.replace("True", "true").replace("False", "false"))
     # parsed_expr = parser_expr("if 2 + 3 then 1 else 3 evalto error")
     # result = solve(parsed_expr.return_value)

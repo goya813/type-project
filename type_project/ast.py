@@ -110,6 +110,7 @@ class Var:
 class Index:
     index: int
 
+
     def __str__(self):
         return f"#{self.index}"
 
@@ -138,6 +139,9 @@ class Env:
                 return v
         raise KeyError(f"key {key} not found")
 
+    def extend(self, env: Env):
+        return Env(self.vars + env.vars)
+
     def __str__(self):
         return ",".join([f"{k}={v}" for k, v in self.vars])
 
@@ -159,3 +163,30 @@ class Judgement:
                 prefix += " "
             prefix += "|- "
         return f"{prefix}{self.e} evalto {self.v}"
+
+
+@dataclass
+class FunctionEval:
+    arg_name: str
+    body: Expr
+
+    def __str__(self):
+        return f"fun {self.arg_name} -> {self.body}"
+
+
+@dataclass
+class FunctionValue:
+    env: Env
+    eval: FunctionEval
+
+    def __str__(self):
+        return f"({self.env})[{self.eval}]"
+
+
+@dataclass
+class FunctionApply:
+    func: Expr
+    arg: Expr
+
+    def __str__(self):
+        return f"{self.func} ({self.arg})"
