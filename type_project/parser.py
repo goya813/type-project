@@ -28,6 +28,7 @@ from type_project.ast import (
     FunctionValue,
     FunctionEval,
     FunctionApply,
+    LetRec,
 )
 
 from type_project.parser_utility import (
@@ -35,8 +36,9 @@ from type_project.parser_utility import (
     opt,
     preceded,
     delimited,
-    space,
+    space0,
     wraped,
+    space1,
 )
 
 T = TypeVar("T")
@@ -146,7 +148,7 @@ def parser_apply() -> StrParser[FunctionApply | Expr, str]:
             (
                 parser_unary(),
                 many0(
-                    preceded(tag(" "), parser_unary()),
+                    preceded(space1(), parser_unary()),
                 ),
             )
         ),
@@ -203,6 +205,23 @@ def parser_let() -> StrParser[Let, str]:
     )
 
 
+def parser_letrec() -> StrParser[LetRec, str]:
+    return parser_map(
+        skip_space_sequence(
+            (
+                tag("let"),
+                tag("rec"),
+                parser_name(),
+                tag("="),
+                parser_expr,
+                tag("in"),
+                parser_expr,
+            )
+        ),
+        lambda x: LetRec(key=x[2], e1=x[4], e2=x[6]),
+    )
+
+
 def parser_fun() -> StrParser[FunctionEval, str]:
     return parser_map(
         skip_space_sequence((tag("fun"), parser_name(), tag("->"), parser_expr)),
@@ -222,6 +241,7 @@ def parser_expr(s: str) -> StrParserResult[Expr, str]:
     return alt(
         [
             parser_let(),
+            parser_letrec(),
             parser_fun(),
             parser_if(),
             parser_lt(),
@@ -263,7 +283,7 @@ def parser_environment() -> StrParser[Env, str]:
         skip_space_sequence(
             (
                 opt(parser_bind()),
-                many0(preceded(wraped(tag(","), space()), parser_bind())),
+                many0(preceded(wraped(tag(","), space0()), parser_bind())),
             )
         ),
         create_env,

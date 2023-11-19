@@ -71,6 +71,16 @@ class Let:
 
 
 @dataclass
+class LetRec:
+    key: str
+    e1: Any
+    e2: Any
+
+    def __str__(self):
+        return f"let rec {self.key} = {self.e1} in {self.e2}"
+
+
+@dataclass
 class FunctionEval:
     arg_name: str
     body: Expr

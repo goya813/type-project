@@ -9,6 +9,7 @@ from type_project.ast import (
     FunctionEval,
     FunctionApply,
     FunctionValue,
+    LetRec,
 )
 from type_project.parser import parser_expr, parser_environment, parser_judge
 
@@ -79,3 +80,21 @@ def test_apply():
     assert pret.remain == ""
 
     assert pret.return_value == Plus(FunctionApply(Var("f"), 1), 2)
+
+
+def test_let_rec():
+    pret = parser_expr("let rec x = 1 in x")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == LetRec("x", 1, Var("x"))
+
+    pret = parser_expr("let rec f = fun x -> x in f 1")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == LetRec(
+        "f", FunctionEval("x", Var("x")), FunctionApply(Var("f"), 1)
+    )
