@@ -28,6 +28,7 @@ from type_project.ast import (
     FunctionValue,
     FunctionEval,
     FunctionApply,
+    LetRec,
 )
 
 from type_project.parser_utility import (
@@ -204,6 +205,23 @@ def parser_let() -> StrParser[Let, str]:
     )
 
 
+def parser_letrec() -> StrParser[LetRec, str]:
+    return parser_map(
+        skip_space_sequence(
+            (
+                tag("let"),
+                tag("rec"),
+                parser_name(),
+                tag("="),
+                parser_expr,
+                tag("in"),
+                parser_expr,
+            )
+        ),
+        lambda x: LetRec(key=x[2], e1=x[4], e2=x[6]),
+    )
+
+
 def parser_fun() -> StrParser[FunctionEval, str]:
     return parser_map(
         skip_space_sequence((tag("fun"), parser_name(), tag("->"), parser_expr)),
@@ -223,6 +241,7 @@ def parser_expr(s: str) -> StrParserResult[Expr, str]:
     return alt(
         [
             parser_let(),
+            parser_letrec(),
             parser_fun(),
             parser_if(),
             parser_lt(),
