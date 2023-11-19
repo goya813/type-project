@@ -90,12 +90,15 @@ class Env:
     def __init__(self, vars: list[(str, Value)]):
         self.vars = vars
 
-    def pop(self):
+    def __eq__(self, other):
+        return self.vars == other
+
+    def pop(self) -> "Env":
         return Env(self.vars[:-1])
 
-    def push(self, key: str, value: Value):
+    def push(self, key: str, value: Value) -> "Env":
         return Env(self.vars + [(key, value)])
-    
+
     def top(self) -> (str, Value):
         return self.vars[-1]
 
@@ -107,6 +110,9 @@ class Env:
 
     def __str__(self):
         return ",".join([f"{k}={v}" for k, v in self.vars])
+
+    def __repr__(self):
+        return str(self)
 
 
 @dataclass

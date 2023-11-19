@@ -1,5 +1,5 @@
-from type_project.ast import Let, Value, Plus, Var
-from type_project.parser import parser_expr
+from type_project.ast import Let, Value, Plus, Var, Env, Judgement, Expr
+from type_project.parser import parser_expr, parser_environment, parser_judge
 
 
 def test_let():
@@ -18,3 +18,21 @@ def test_nested_let():
     assert pret.remain == ""
 
     print(pret)
+
+
+def test_environment():
+    pret = parser_environment()("x = 3, y = 2, z = true")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == Env([("x", 3), ("y", 2), ("z", True)])
+
+
+def test_judge():
+    pret = parser_judge()("x = 3, y = 2 |- 1 + 1 evalto 2")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == Judgement(Env([("x", 3), ("y", 2)]), Plus(1, 1), 2)
