@@ -25,6 +25,9 @@ from type_project.ast import (
     Value,
     Judgement,
     Error,
+    FunctionValue,
+    FunctionEval,
+    FunctionApply,
 )
 
 from type_project.parser_utility import (
@@ -125,9 +128,29 @@ def assoc_left(head: Expr, tail: list[tuple[str, Expr]]) -> Any:
 def parser_times() -> StrParser[Times, str]:
     return parser_map(
         skip_space_sequence(
-            (parser_unary(), many0(skip_space_sequence((tag("*"), parser_unary()))))
+            (parser_apply(), many0(skip_space_sequence((tag("*"), parser_apply()))))
         ),
         lambda x: assoc_left(x[0], x[1]),
+    )
+
+
+def parser_apply() -> StrParser[FunctionApply | Expr, str]:
+    def f(x: tuple[Expr, list[Expr]]):
+        ret = x[0]
+        for l in x[1]:
+            ret = FunctionApply(ret, l)
+        return ret
+
+    return parser_map(
+        sequence(
+            (
+                parser_unary(),
+                many0(
+                    preceded(tag(" "), parser_unary()),
+                ),
+            )
+        ),
+        f,
     )
 
 
@@ -180,7 +203,14 @@ def parser_let() -> StrParser[Let, str]:
     )
 
 
-def skip_space_sequence(parsers: StrParser[Any, Any]) -> StrParser[Any, Any]:
+def parser_fun() -> StrParser[FunctionEval, str]:
+    return parser_map(
+        skip_space_sequence((tag("fun"), parser_name(), tag("->"), parser_expr)),
+        lambda x: FunctionEval(x[1], x[3]),
+    )
+
+
+def skip_space_sequence(parsers: tuple[StrParser[Any, Any]]) -> StrParser[Any, Any]:
     ret_parsers = []
     for p in parsers:
         ret_parsers.append(p)
@@ -192,6 +222,7 @@ def parser_expr(s: str) -> StrParserResult[Expr, str]:
     return alt(
         [
             parser_let(),
+            parser_fun(),
             parser_if(),
             parser_lt(),
         ]
@@ -207,7 +238,9 @@ def parser_bind() -> StrParser[tuple[str, Value]]:
 
 def parser_name() -> StrParser[str, str]:
     def is_not_keyword(s):
-        if s in {"let", "if", "then", "else"}:
+        if s in {"let", "if", "then", "else", "in", "evalto"}:
+            raise ValueError
+        if s == "":
             raise ValueError
         return s
 
