@@ -23,7 +23,8 @@ from type_project.ast import (
     Var,
     Env,
     Value,
-    Judgement, Error,
+    Judgement,
+    Error,
 )
 
 from type_project.parser_utility import (
