@@ -81,11 +81,38 @@ class LetRec:
 
 
 @dataclass
+class FunctionEval:
+    arg_name: str
+    body: Expr
+
+
+@dataclass
+class FunctionValue:
+    env: Env
+    eval: FunctionEval
+
+
+@dataclass
+class FunctionApply:
+    func: Expr
+    arg: Expr
+
+
+@dataclass
 class Var:
     key: str
 
     def __str__(self):
         return self.key
+
+
+@dataclass
+class Index:
+    index: int
+
+
+    def __str__(self):
+        return f"#{self.index}"
 
 
 class Env:

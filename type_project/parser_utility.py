@@ -1,3 +1,5 @@
+from typing import Any
+
 from nompy import (
     StrParser,
     parser_map,
@@ -46,3 +48,10 @@ def space1() -> StrParser:
         return x
 
     return parser_map_exception(take_while(lambda c: c in " \t\n"), f)
+
+
+def number() -> StrParser[int, Any]:
+    def f(x: str):
+        return int(x)
+
+    return parser_map_exception(take_while(str.isdigit), f)
