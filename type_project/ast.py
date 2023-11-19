@@ -7,6 +7,12 @@ Value = int | bool
 
 
 @dataclass
+class Error:
+    def __str__(self):
+        return "error"
+
+
+@dataclass
 class Plus:
     e1: Any
     e2: Any
@@ -93,6 +99,9 @@ class Env:
     def push(self, key: str, value: Value) -> "Env":
         return Env(self.vars + [(key, value)])
 
+    def top(self) -> (str, Value):
+        return self.vars[-1]
+
     def lookup(self, key):
         for k, v in self.vars[::-1]:
             if k == key:
@@ -108,6 +117,15 @@ class Env:
 
 @dataclass
 class Judgement:
-    env: Env
+    env: Env | None
     e: Any
     v: Any
+
+    def __str__(self):
+        prefix = ""
+        if self.env:
+            prefix = str(self.env)
+            if prefix:
+                prefix += " "
+            prefix += "|- "
+        return f"{prefix}{self.e} evalto {self.v}"

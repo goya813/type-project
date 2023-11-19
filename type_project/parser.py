@@ -23,8 +23,9 @@ from type_project.ast import (
     Var,
     Env,
     Value,
-    Judgement,
+    Judgement, Error,
 )
+
 from type_project.parser_utility import (
     terminated,
     opt,
@@ -68,6 +69,10 @@ def parser_bool() -> StrParser[bool, str]:
     return parser_map(alt([tag("true"), tag("false")]), lambda x: x == "true")
 
 
+def parser_error() -> StrParser[Error, str]:
+    return parser_map(tag("error"), lambda x: Error())
+
+
 def parser_paren_expr() -> StrParser[Expr, str]:
     return parser_map_exception(
         skip_space_sequence((tag("("), parser_expr, tag(")"))), lambda x: x[1]
@@ -78,7 +83,9 @@ def parser_unary() -> StrParser[Expr, str]:
     return alt(
         [
             parser_paren_expr(),
-            parser_value(),
+            parser_int(),
+            parser_bool(),
+            parser_error(),
             parser_var(),
         ]
     )

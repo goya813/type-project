@@ -1,265 +1,99 @@
 from type_project.ast import *
 from type_project.parser import parser_expr
 
-
-class ErrorPlusErrorL(Exception):
-    pass
-
-
-class ErrorPlusBoolL(Exception):
-    def __init__(self, e1: bool, e2: Any):
-        self.e1 = e1
-        self.e2 = e2
+from collections.abc import Callable
+from dataclasses import dataclass
 
 
-class ErrorPlusBoolR(Exception):
-    def __init__(self, e1: Any, e2: bool):
-        self.e1 = e1
-        self.e2 = e2
+@dataclass
+class Derivation:
+    conclusion: Judgement
+    rule: str
+    premises: list["Derivation | str"]
+
+    def val(self) -> Value:
+        return self.conclusion.v
 
 
-class ErrorLtBoolL(Exception):
-    def __init__(self, e1: bool, e2: Any):
-        self.e1 = e1
-        self.e2 = e2
+def infer(env: Env, e: Expr, v: Value = None) -> Derivation:
+    def by(v: Value, rule: str, premises: list[Derivation | str]) -> Derivation:
+        return Derivation(Judgement(env, e, v), rule, premises)
 
-
-class ErrorLtBoolR(Exception):
-    def __init__(self, e1: Any, e2: bool):
-        self.e1 = e1
-        self.e2 = e2
-
-
-def is_int(x):
-    return not isinstance(x, bool) and isinstance(x, int)
-
-
-def solve_value(e: Expr, env: Env) -> Value:
-    match e:
-        case Var(e1):
-            return env.lookup(e1)
-        case Plus(e1, e2):
-            v1 = solve_value(e1, env)
-            v2 = solve_value(e2, env)
-            v1_is_int = is_int(v1)
-            v2_is_int = is_int(v2)
-
-            if not v1_is_int:
-                raise ErrorPlusBoolL(e1, e2)
-
-            if not v2_is_int:
-                raise ErrorPlusBoolR(e1, e2)
-
-            return v1 + v2
-        case Minus(e1, e2):
-            v1 = solve_value(e1, env)
-            v2 = solve_value(e2, env)
-            v1_is_int = is_int(v1)
-            v2_is_int = is_int(v2)
-            match (v1_is_int, v2_is_int):
-                case (True, True):
-                    return v1 - v2
-                case _:
-                    raise Exception(f"evalto error")
-        case Times(e1, e2):
-            v1 = solve_value(e1, env)
-            v2 = solve_value(e2, env)
-            v1_is_int = is_int(v1)
-            v2_is_int = is_int(v2)
-            match (v1_is_int, v2_is_int):
-                case (True, True):
-                    return v1 * v2
-                case _:
-                    raise Exception(f"evalto error")
-        case Lt(e1, e2):
-            v1 = solve_value(e1, env)
-            v2 = solve_value(e2, env)
-            v1_is_int = is_int(v1)
-            v2_is_int = is_int(v2)
-            match (v1_is_int, v2_is_int):
-                case (True, True):
-                    return v1 < v2
-                case (False, False):
-                    raise ErrorLtBoolL(v1, v2)
-                case (False, True):
-                    raise ErrorLtBoolL(v1, v2)
-                case (True, False):
-                    raise ErrorLtBoolR(v1, v2)
-                case _:
-                    raise Exception(f"evalto error")
-        case If(e1, e2, e3):
-            if solve_value(e1, env):
-                return solve_value(e2, env)
-            else:
-                return solve_value(e3, env)
-        case Let(key, e1, e2):
-            v1 = solve_value(e1, env)
-            env = env.push(key, v1)
-            return solve_value(e2, env)
-        case int(x):
-            return x
-        case bool(x):
-            return x
-
-
-def generate_env_text(env: Env) -> str:
-    if len(env.vars) == 0 or env.vars is None:
-        return "|- "
-
-    result = ""
-    for k, v in env.vars[:-1]:
-        result += f"{k} = {v}, "
-
-    k, v = env.vars[-1]
-    result += f"{k} = {v} |- "
-
-    return result
-
-
-def solve(e: Expr, env: Env) -> str:
-    result = ""
-
-    def append_result(s: str, e: Env, has_newline: bool = True, use_env: bool = True):
-        nonlocal result
-        if use_env:
-            result += generate_env_text(e)
-        result += s
-        if has_newline:
-            result += "\n"
+    def by_int2(
+        fn: Callable[[int, int], Value], op: str, name: str, e1: Expr, e2: Expr
+    ) -> Derivation:
+        d1 = infer(env, e1)
+        d2 = infer(env, e2)
+        match (d1.val(), d2.val()):
+            case (bool(), _):
+                return by(Error(), f"E-{name}BoolL", [d1])
+            case (Error(), _):
+                return by(Error(), f"E-{name}ErrorL", [d1])
+            case (_, bool()):
+                return by(Error(), f"E-{name}BoolR", [d2])
+            case (_, Error()):
+                return by(Error(), f"E-{name}ErrorR", [d2])
+            case (int(l), int(r)):
+                v = fn(l, r)
+                d3 = f"{l} {op} {r} is {v} by B-{name}" + "{}"
+                return by(v, f"E-{name}", [d1, d2, d3])
 
     match e:
         case Var(e1):
-            key, _ = env.vars[-1]
-            value = env.lookup(e1)
-
-            if e1 == key:
-                append_result(f"{e1} evalto {value} by E-Var1" + "{};", env, has_newline=False)
+            k, v = env.top()
+            if e1 == k:
+                return by(v, "E-Var1", [])
             else:
-                append_result(f"{e1} evalto {value} by E-Var2" + "{", env)
-                append_result(solve(e, env.pop()), env, use_env=False)
-                append_result("};", env, use_env=False, has_newline=False)
-
+                d = infer(env.pop(), e)
+                return by(d.val(), "E-Var2", [d])
         case Plus(e1, e2):
-            try:
-                x1 = solve_value(e1, env)
-            except ErrorPlusBoolR as e:
-                append_result(f"{e1} + {e2} evalto error by E-PlusErrorL" + "{", env)
-                append_result(f"{e1} + {e2} evalto error by E-PlusErrorL" + "{", env)
-                append_result(f" {e1} evalto error by E-PlusBoolR" + "{", env)
-                append_result(f"{e.e2} evalto {e.e2} by E-Bool" + "{};", env)
-                append_result("};", env, use_env=False)
-                append_result("};", env, use_env=False)
-                return result
-
-            try:
-                x2 = solve_value(e2, env)
-            except ErrorPlusBoolR:
-                append_result(f"{e1} + {e2} evalto error ", env)
-                return result
-
-            v = x1 + x2
-            append_result(f"{e1} + {e2} evalto {v} by E-Plus" + "{", env)
-            append_result(solve(e1, env), env, use_env=False)
-            append_result(solve(e2, env), env, use_env=False)
-            append_result(f" {x1} plus {x2} is {v} by B-Plus" + "{};", env, use_env=False)
-            append_result("};", env, use_env=False, has_newline=False)
-
+            return by_int2(lambda x, y: x + y, "plus", "Plus", e1, e2)
         case Minus(e1, e2):
-            x1 = solve_value(e1, env)
-            x2 = solve_value(e2, env)
-            match (x1, x2):
-                case (int(), int()):
-                    v = x1 - x2
-                    append_result(f"{e1} - {e2} evalto {v} by E-Minus" + "{", env)
-                    append_result(solve(e1, env), env, use_env=False)
-                    append_result(solve(e2, env), env, use_env=False)
-                    append_result(f" {x1} minus {x2} is {v} by B-Minus" + "{};", env, use_env=False)
-                    append_result("};", env, use_env=False, has_newline=False)
-                case _:
-                    append_result(f"{e1} - {e2} evalto error", env)
+            return by_int2(lambda x, y: x - y, "minus", "Minus", e1, e2)
         case Times(e1, e2):
-            x1 = solve_value(e1, env)
-            x2 = solve_value(e2, env)
-            match (x1, x2):
-                case (int(), int()):
-                    v = x1 * x2
-                    append_result(f"{e1} * {e2} evalto {v} by E-Times" + "{", env)
-                    append_result(solve(e1, env), env, use_env=False)
-                    append_result(solve(e2, env), env, use_env=False)
-                    append_result(f" {x1} times {x2} is {v} by B-Times" + "{};", env, use_env=False)
-                    append_result("};", env, use_env=False, has_newline=False)
-                case _:
-                    append_result(f"{e1} * {e2} evalto error", env)
-        case If(e1, e2, e3):
-            x1 = solve_value(e1, env)
-            is_bool = isinstance(x1, bool)
-            if is_bool:
-                if x1:
-                    try:
-                        x2 = solve_value(e2, env)
-                        append_result(f"{e} evalto {x2} by E-IfT" + "{", env)
-                        append_result(solve(e1, env), env, use_env=False)
-                        append_result(solve(e2, env), env, use_env=False)
-                        append_result("};", env, use_env=False, has_newline=False)
-                    except:
-                        append_result(f"{e} evalto error by E-IfTError" + "{", env)
-                        append_result(solve(e1, env), env, use_env=False)
-                        append_result(solve(e2, env), env, use_env=False)
-                        append_result("};", env, use_env=False, has_newline=False)
-                else:
-                    try:
-                        x3 = solve_value(e3, env)
-                        append_result(f"{e} evalto {x3} by E-IfF" + "{", env)
-                        append_result(solve(e1, env), env, use_env=False)
-                        append_result(solve(e3, env), env, use_env=False)
-                        append_result("};", env, use_env=False, has_newline=False)
-                    except:
-                        append_result(f"{e} evalto error by E-IfFError" + "{", env)
-                        append_result(solve(e1, env), env, use_env=False)
-                        append_result(solve(e3, env), env, use_env=False)
-                        append_result("};", env, use_env=False, has_newline=False)
-            else:
-                append_result(f"{e} evalto error by E-IfInt" + "{", env)
-                append_result(solve(e1, env), env, use_env=False)
-                append_result("};", env, use_env=False)
+            return by_int2(lambda x, y: x * y, "times", "Times", e1, e2)
         case Lt(e1, e2):
-            try:
-                is_true = solve_value(e, env)
-                v1 = solve_value(e1, env)
-                v2 = solve_value(e2, env)
-                if is_true:
-                    append_result(f"{e1} < {e2} evalto true by E-Lt" + "{", env)
-                    append_result(solve(e1, env), env, use_env=False)
-                    append_result(solve(e2, env), env, use_env=False)
-                    append_result(f" {v1} less than {v2} is true by B-Lt" + "{};", env, use_env=False)
-                else:
-                    append_result(f"{e1} < {e2} evalto false by E-Lt" + "{", env)
-                    append_result(solve(e1, env), env, use_env=False)
-                    append_result(solve(e2, env), env, use_env=False)
-                    append_result(f" {v1} less than {v2} is false by B-Lt" + "{};", env, use_env=False)
-                append_result("};", env, use_env=False)
-            except ErrorLtBoolL:
-                append_result(f"{e1} < {e2} evalto error by E-LtBoolL" + "{", env)
-                append_result(f"{e1} evalto {e1} by E-Bool" + "{};", env)
-                append_result("};", env, use_env=False)
-            except ErrorLtBoolR:
-                append_result(f"{e1} < {e2} evalto error by E-LtBoolR" + "{", env)
-                append_result(f"{e2} evalto {e2} by E-Bool" + "{};", env)
-                append_result("};", env, use_env=False)
-        case Let(key, e1, e2):
-            v1 = solve_value(e1, env)
-            env = env.push(key, v1)
-            v2 = solve_value(e2, env)
-            append_result(f"{e} evalto {v2} by E-Let" + "{", env.pop())
-            append_result(solve(e1, env.pop()), env, use_env=False)
-            append_result(solve(e2, env), env, use_env=False)
-            append_result("};", env, use_env=False)
-        case int(x):
-            append_result(f"{x} evalto {x} by E-Int" + "{};", env, has_newline=False)
-        case bool(x):
-            append_result(f"{x} evalto {x} by E-Bool" + "{};", env, has_newline=False)
+            return by_int2(lambda x, y: x < y, "less than", "Lt", e1, e2)
+        case If(e1, e2, e3):
+            d1 = infer(env, e1)
+            match d1.val():
+                case True:
+                    d2 = infer(env, e2)
+                    match d2.val():
+                        case Error():
+                            return by(Error(), "E-IfTError", [d1, d2])
+                        case v:
+                            return by(v, "E-IfT", [d1, d2])
+                case False:
+                    d3 = infer(env, e3)
+                    match d3.val():
+                        case Error():
+                            return by(Error(), "E-IfFError", [d1, d3])
+                        case v:
+                            return by(v, "E-IfF", [d1, d3])
+                case Error():
+                    return by(Error(), "E-IfError", [d1])
+                case int():
+                    return by(Error(), "E-IfInt", [d1])
 
-    return result
+        case Let(key, e1, e2):
+            d1 = infer(env, e1)
+            d2 = infer(env.push(key, d1.val()), e2)
+            return by(d2.val(), "E-Let", [d1, d2])
+        case bool(x):
+            return by(x, "E-Bool", [])
+        case int(x):
+            return by(x, "E-Int", [])
+    raise Exception(env, e, v)
+
+
+def pp(d: Derivation | str, depth=0) -> str:
+    indent = "  " * depth
+    if isinstance(d, str):
+        return indent + d + ";"
+    premises = "\n".join([pp(c, depth=depth + 1) for c in d.premises])
+    body = "\n".join([" {", premises, indent + "}"]) if premises else "{}"
+    return f"{indent}{d.conclusion} by {d.rule}{body};"
 
 
 if __name__ == "__main__":
@@ -277,10 +111,13 @@ if __name__ == "__main__":
     # j = Judgement(e, "error")
 
     env = Env([])
-    e = Let("x", Let("y", Minus(3, 2), Times(Var("y"), Var("y"))), Let("y", 4, Plus(Var("x"), Var("y"))))
+    e = Let(
+        "x",
+        Let("y", Minus(3, 2), Times(Var("y"), Var("y"))),
+        Let("y", 4, Plus(Var("x"), Var("y"))),
+    )
     # e = parser_expr("let x = let y = 3 - 2 in y * y in let y = 4 in x + y").return_value
-    print(e)
-    j = Judgement(e, 5)
+    j = Judgement(env, e, 5)
     """
     3 + if -23 < -2 * 8 then 8 else 2 + 4 evalto 11
     3 + (if -23 < -2 * 8 then 8 else 2) + 4 evalto 15
@@ -315,7 +152,7 @@ if __name__ == "__main__":
      };
     };
     """
-    result = solve(j.e, env)
+    result = pp(infer(j.env, j.e, j.v))
     print(result.replace("True", "true").replace("False", "false"))
     # parsed_expr = parser_expr("if 2 + 3 then 1 else 3 evalto error")
     # result = solve(parsed_expr.return_value)
