@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 
@@ -69,6 +71,24 @@ class Let:
 
 
 @dataclass
+class FunctionEval:
+    arg_name: str
+    body: Expr
+
+
+@dataclass
+class FunctionValue:
+    env: Env
+    eval: FunctionEval
+
+
+@dataclass
+class FunctionApply:
+    func: Expr
+    arg: Expr
+
+
+@dataclass
 class Var:
     key: str
 
@@ -93,10 +113,10 @@ class Env:
     def __eq__(self, other):
         return self.vars == other
 
-    def pop(self) -> "Env":
+    def pop(self) -> Env:
         return Env(self.vars[:-1])
 
-    def push(self, key: str, value: Value) -> "Env":
+    def push(self, key: str, value: Value) -> Env:
         return Env(self.vars + [(key, value)])
 
     def top(self) -> (str, Value):

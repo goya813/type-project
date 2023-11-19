@@ -1,4 +1,15 @@
-from type_project.ast import Let, Value, Plus, Var, Env, Judgement, Expr
+from type_project.ast import (
+    Let,
+    Value,
+    Plus,
+    Var,
+    Env,
+    Judgement,
+    Expr,
+    FunctionEval,
+    FunctionApply,
+    FunctionValue,
+)
 from type_project.parser import parser_expr, parser_environment, parser_judge
 
 
@@ -36,3 +47,35 @@ def test_judge():
     assert pret.remain == ""
 
     assert pret.return_value == Judgement(Env([("x", 3), ("y", 2)]), Plus(1, 1), 2)
+
+
+def test_fun():
+    pret = parser_expr("fun a -> 1")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == FunctionEval("a", 1)
+
+
+def test_apply():
+    pret = parser_expr("f 1")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == FunctionApply(Var("f"), 1)
+
+    pret = parser_expr("f 1 2")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == FunctionApply(FunctionApply(Var("f"), 1), 2)
+
+    pret = parser_expr("f 1 + 2")
+
+    assert pret.error is None
+    assert pret.remain == ""
+
+    assert pret.return_value == Plus(FunctionApply(Var("f"), 1), 2)
